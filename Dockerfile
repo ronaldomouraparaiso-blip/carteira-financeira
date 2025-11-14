@@ -14,11 +14,27 @@ RUN apk update && apk add --no-cache \
     freetype-dev \
     libwebp-dev \
     postgresql-dev \
-    g++
+    g++ \
+    oniguruma-dev \
+    && docker-php-ext-configure gd \
+        --with-jpeg \
+        --with-freetype \
+        --with-webp \
+    && docker-php-ext-install \
+        pdo_mysql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        intl \
+        xml \
+        gd \
+        zip \
+        opcache
+
 
 # Instalar extensões PHP
-RUN docker-php-ext-configure gd --with-jpeg --with-freetype --with-webp
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip opcache
+
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -36,8 +52,17 @@ COPY . /var/www
 # Configurar permissões (para o usuário www-data)
 RUN chown -R www-data:www-data /var/www
 
+# Ajustar permissões do Laravel
+RUN addgroup -g 1000 www && adduser -G www -g www -s /bin/sh -D www \
+    && chown -R www:www /var/www \
+    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
+
 # Expor porta 9000 (porta padrão do PHP-FPM)
 EXPOSE 9000
 
 # Comando de inicialização (PHP-FPM)
 CMD ["php-fpm"]
+
+USER www
+
